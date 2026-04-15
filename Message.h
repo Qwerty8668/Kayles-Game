@@ -11,13 +11,22 @@ enum class MessageType : uint8_t {
 };
 
 class Message {
+public:
+    Message(MessageType type, uint32_t player_id, uint32_t game_id, uint8_t pawn);
+
+    [[nodiscard]] MessageType get_type() const;
+
+    [[nodiscard]] uint32_t get_player_id() const;
+
+    [[nodiscard]] uint32_t get_game_id() const;
+
+    [[nodiscard]] uint8_t get_pawn() const;
+
 private:
     MessageType msg_type;
     uint32_t player_id;
     uint32_t game_id;
     uint8_t pawn;
-public:
-    Message(MessageType msg_type, uint32_t player_id, uint32_t game_id, uint8_t pawn);
 };
 
 

@@ -1,8 +1,12 @@
 #ifndef KAYLES_GAME_H
 #define KAYLES_GAME_H
+#include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <vector>
+#include <queue>
+
+#include "Types.h"
 
 enum class GameStatus : uint8_t {
     WAITING_FOR_OPPONENT = 0,
@@ -13,31 +17,45 @@ enum class GameStatus : uint8_t {
 };
 
 class GameState {
+public:
+    GameState(GameId id, PlayerId a_id, PawnIndex max_pawn, const std::array<std::byte, 32>& pawns,  std::chrono::seconds timeout);
+
+    bool make_single_move(PawnIndex index, PlayerId player_id);
+
+    bool make_double_move(PawnIndex index, PlayerId player_id);
+
+    void add_player(PlayerId b_id);
+
+    bool give_up(PlayerId player_id);
+
+    void keep_alive(PlayerId player_id);
+
+    bool check_timeout();
+
 private:
-    uint32_t game_id;
-    uint32_t player_a_id;
-    uint32_t player_b_id;
-    GameStatus  status;
-    uint8_t  max_pawn;
-    std::vector<std::byte> pawn_row;
-    [[nodiscard]] bool is_player_turn(uint32_t player_id) const;
-    [[nodiscard]] bool is_pawn(uint32_t index) const;
+    GameId game_id;
+    PlayerId player_a_id;
+    PlayerId player_b_id = 0;
+    GameStatus status = GameStatus::WAITING_FOR_OPPONENT;
+    PawnIndex  max_pawn;
+    std::array<std::byte, 32> pawn_row;
+    std::chrono::steady_clock::time_point last_seen_a;
+    std::chrono::steady_clock::time_point last_seen_b;
+    std::chrono::seconds timeout;
 
-    void remove_pawn(uint32_t index);
+    bool is_player_turn(PlayerId player_id) const;
 
-    void switch_turn();
+    bool is_pawn(PawnIndex index);
+
+    void remove_pawn(PawnIndex index);
 
     void check_win_conditions();
 
-public:
-    GameState(uint32_t id, uint32_t a_id, uint8_t max_pawn, const std::vector<std::byte>& pawns);
-    bool add_player(uint32_t b_id);
-    bool make_single_move(uint8_t index, uint32_t player_id);
-    bool make_double_move(uint8_t index, uint32_t player_id);
+    void switch_turn();
 
+    void update_last_seen(PlayerId player_id);
 
-
-
+    static std::pair<size_t, std::byte> get_byte_index_and_mask(PawnIndex index);
 };
 
 #endif //KAYLES_GAME_H
