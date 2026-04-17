@@ -3,7 +3,8 @@
 #include <climits>
 #include <functional>
 
-GameState::GameState(const GameId id, const PlayerId a_id, const PawnIndex max_pawn, const std::array<std::byte, 32>& pawns,  std::chrono::seconds timeout)
+GameState::GameState(const GameId id, const PlayerId a_id, const PawnIndex max_pawn,
+                     const std::array<std::byte, 32> &pawns, std::chrono::seconds timeout)
     : game_id(id), player_a_id(a_id), max_pawn(max_pawn), pawn_row(pawns), timeout(timeout) {
     last_seen_a = std::chrono::steady_clock::now();
 }
