@@ -69,7 +69,7 @@ size_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,
 void safe_sendto(int sockfd, const void *buf, size_t len, int flags,
                const struct sockaddr *dest_addr, socklen_t addrlen) {
     if (sendto(sockfd, buf, len, flags, dest_addr, addrlen) < 0) {
-        syserr("sendto");
+        printf("Sending message failed. Errno: %d", errno);
     }
 }
 

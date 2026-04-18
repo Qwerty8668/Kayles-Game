@@ -6,7 +6,7 @@
 #include <string>
 #include <netinet/in.h>
 
-#include "GameState.h"
+#include "Game.h"
 #include "Message.h"
 
 
@@ -24,7 +24,7 @@ private:
     uint16_t port;
     const std::chrono::seconds timeout;
     std::queue<GameId> free_ids;
-    std::map<GameId, GameState> games;
+    std::map<GameId, Game> games;
     std::optional<GameId> pending_game_id;
     GameId next_game_id = 0;
 
@@ -34,24 +34,24 @@ private:
 
     void check_timeouts();
 
-    GameState *handle_message(Message &msg);
+    Game *handle_message(Message &msg);
 
     std::optional<uint8_t> validate_message(Message &msg);
 
-    static void send_game_state(int sockfd, struct sockaddr_in client, const GameState &game);
+    static void send_game_state(int sockfd, struct sockaddr_in client, const Game &game);
 
     static void send_wrong_msg(int sockfd, struct sockaddr_in client,
                                std::vector<std::byte> &packet, uint8_t err_idx);
 
-    GameState *handle_join(PlayerId player_id);
+    Game *handle_join(PlayerId player_id);
 
-    GameState *handle_move_1(PlayerId player_id, GameId game_id, PawnIndex pawn);
+    Game *handle_move_1(PlayerId player_id, GameId game_id, PawnIndex pawn);
 
-    GameState *handle_move_2(PlayerId player_id, GameId game_id, PawnIndex pawn);
+    Game *handle_move_2(PlayerId player_id, GameId game_id, PawnIndex pawn);
 
-    GameState *handle_keep_alive(PlayerId player_id, GameId game_id);
+    Game *handle_keep_alive(PlayerId player_id, GameId game_id);
 
-    GameState *handle_give_up(PlayerId player_id, GameId game_id);
+    Game *handle_give_up(PlayerId player_id, GameId game_id);
 
     static std::optional<uint8_t> validate_join(PlayerId player_id);
 

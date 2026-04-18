@@ -2,7 +2,7 @@
 #define KAYLES_PROTOCOL_H
 #include <variant>
 
-#include "GameState.h"
+#include "Game.h"
 #include "Message.h"
 
 
@@ -16,9 +16,9 @@ namespace Protocol {
 
     // MSG_GAME_STATE
 
-    std::vector<std::byte> serialize_game_state(const GameState& game);
+    std::vector<std::byte> serialize_game_state(const Game& game);
 
-    GameState deserialize_game_state(const std::vector<std::byte>& buff);
+    Game deserialize_game_state(const std::vector<std::byte>& buff);
 
     std::vector<std::byte> serialize_wrong_msg(const std::vector<std::byte>& packet, uint8_t err_idx);
 

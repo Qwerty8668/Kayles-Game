@@ -42,7 +42,7 @@ void Server::run() {
             continue;
         }
 
-        GameState *game_ptr = handle_message(msg);
+        Game *game_ptr = handle_message(msg);
         if (game_ptr != nullptr)
             send_game_state(socket_fd, client, *game_ptr);
     }
@@ -81,7 +81,7 @@ void Server::check_timeouts() {
     }
 }
 
-GameState *Server::handle_message(Message &msg) {
+Game *Server::handle_message(Message &msg) {
     switch (msg.get_type()) {
         case MessageType::MSG_JOIN:
             return handle_join(msg.get_player_id());
@@ -112,7 +112,7 @@ std::optional<uint8_t> Server::validate_message(Message &msg) {
     }
 }
 
-void Server::send_game_state(int sockfd, struct sockaddr_in client, const GameState &game) {
+void Server::send_game_state(int sockfd, struct sockaddr_in client, const Game &game) {
     std::vector<std::byte> buffer = Protocol::serialize_game_state(game);
     safe_sendto(sockfd, buffer.data(), buffer.size(), 0,
                 reinterpret_cast<struct sockaddr *>(&client), sizeof(client));
@@ -125,8 +125,8 @@ void Server::send_wrong_msg(int sockfd, struct sockaddr_in client, std::vector<s
                 reinterpret_cast<struct sockaddr *>(&client), sizeof(client));
 }
 
-GameState *Server::handle_join(PlayerId player_id) {
-    GameState *game = nullptr;
+Game *Server::handle_join(PlayerId player_id) {
+    Game *game = nullptr;
     if (pending_game_id.has_value()) {
         GameId id = pending_game_id.value();
         game = &games.at(id);
@@ -137,7 +137,7 @@ GameState *Server::handle_join(PlayerId player_id) {
         // If no id is free, do nothing.
         if (opt_id.has_value()) {
             GameId id = opt_id.value();
-            games.emplace(id, GameState(id, player_id, max_pawn, pawn_row, timeout));
+            games.emplace(id, Game(id, player_id, max_pawn, pawn_row, timeout));
             pending_game_id = id;
             game = &games.at(id);
         }
@@ -147,26 +147,26 @@ GameState *Server::handle_join(PlayerId player_id) {
 
 // We can safely take the game using .at, because message with non-existing game_id
 // is taken as invalid. Server is single threaded, so no race-conditions are possible.
-GameState *Server::handle_move_1(PlayerId player_id, GameId game_id, PawnIndex pawn) {
-    GameState *game = &games.at(game_id);
+Game *Server::handle_move_1(PlayerId player_id, GameId game_id, PawnIndex pawn) {
+    Game *game = &games.at(game_id);
     game->make_single_move(pawn, player_id);
     return game;
 }
 
-GameState *Server::handle_move_2(PlayerId player_id, GameId game_id, PawnIndex pawn) {
-    GameState *game = &games.at(game_id);
+Game *Server::handle_move_2(PlayerId player_id, GameId game_id, PawnIndex pawn) {
+    Game *game = &games.at(game_id);
     game->make_double_move(pawn, player_id);
     return game;
 }
 
-GameState *Server::handle_keep_alive(PlayerId player_id, GameId game_id) {
-    GameState *game = &games.at(game_id);
+Game *Server::handle_keep_alive(PlayerId player_id, GameId game_id) {
+    Game *game = &games.at(game_id);
     game->keep_alive(player_id);
     return game;
 }
 
-GameState *Server::handle_give_up(PlayerId player_id, GameId game_id) {
-    GameState *game = &games.at(game_id);
+Game *Server::handle_give_up(PlayerId player_id, GameId game_id) {
+    Game *game = &games.at(game_id);
     game->give_up(player_id);
     return game;
 }
@@ -186,7 +186,7 @@ std::optional<uint8_t> Server::validate_args(PlayerId player_id, GameId game_id)
 
     if (!games.contains(game_id)) return pos;
 
-    GameState *game = &games.at(game_id);
+    Game *game = &games.at(game_id);
     if (!game->has_player(player_id)) {
         return pos;
     }

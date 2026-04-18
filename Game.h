@@ -16,9 +16,9 @@ enum class GameStatus : uint8_t {
     WIN_B = 4
 };
 
-class GameState {
+class Game {
 public:
-    GameState(GameId id, PlayerId a_id, PawnIndex max_pawn, const std::array<std::byte, 32>& pawns,  std::chrono::seconds timeout);
+    Game(GameId id, PlayerId a_id, PawnIndex max_pawn, const std::array<std::byte, 32>& pawns,  std::chrono::seconds timeout);
 
     bool make_single_move(PawnIndex index, PlayerId player_id);
 

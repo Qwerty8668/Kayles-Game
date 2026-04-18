@@ -144,7 +144,7 @@ namespace Protocol {
         }
     }
 
-    std::vector<std::byte> serialize_game_state(const GameState &game) {
+    std::vector<std::byte> serialize_game_state(const Game &game) {
         std::vector<std::byte> buff;
 
         insert_buffer_32(buff, game.get_id());

@@ -1,15 +1,15 @@
-#include "GameState.h"
+#include "Game.h"
 #include "Types.h"
 #include <climits>
 #include <functional>
 
-GameState::GameState(const GameId id, const PlayerId a_id, const PawnIndex max_pawn,
+Game::Game(const GameId id, const PlayerId a_id, const PawnIndex max_pawn,
                      const std::array<std::byte, 32> &pawns, std::chrono::seconds timeout)
     : game_id(id), player_a_id(a_id), max_pawn(max_pawn), pawn_row(pawns), timeout(timeout) {
     last_seen_a = std::chrono::steady_clock::now();
 }
 
-bool GameState::make_single_move(const PawnIndex index, const PlayerId player_id) {
+bool Game::make_single_move(const PawnIndex index, const PlayerId player_id) {
     update_last_seen(player_id);
     if (!is_player_turn(player_id)) return false;
     if (index > max_pawn) return false;
@@ -22,7 +22,7 @@ bool GameState::make_single_move(const PawnIndex index, const PlayerId player_id
     return true;
 }
 
-bool GameState::make_double_move(const PawnIndex index, const PlayerId player_id) {
+bool Game::make_double_move(const PawnIndex index, const PlayerId player_id) {
     update_last_seen(player_id);
     if (!is_player_turn(player_id)) return false;
     if (index + 1 > max_pawn) return false;
@@ -37,13 +37,13 @@ bool GameState::make_double_move(const PawnIndex index, const PlayerId player_id
     return true;
 }
 
-void GameState::add_player(const PlayerId b_id) {
+void Game::add_player(const PlayerId b_id) {
     player_b_id = b_id;
     status = GameStatus::TURN_B;
     update_last_seen(b_id);
 }
 
-bool GameState::give_up(PlayerId player_id) {
+bool Game::give_up(PlayerId player_id) {
     update_last_seen(player_id);
     // Player can give up only when it is his turn.
     if (!is_player_turn(player_id)) return false;
@@ -56,16 +56,16 @@ bool GameState::give_up(PlayerId player_id) {
     return true;
 }
 
-void GameState::keep_alive(PlayerId player_id) {
+void Game::keep_alive(PlayerId player_id) {
     update_last_seen(player_id);
 }
 
-bool GameState::has_player(PlayerId player_id) const {
+bool Game::has_player(PlayerId player_id) const {
     return (player_id == player_a_id || player_id == player_b_id);
 }
 
 /* Returns true if game can be deleted. False otherwise */
-bool GameState::check_timeout() {
+bool Game::check_timeout() {
     auto now = std::chrono::steady_clock::now();
 
     if (status == GameStatus::WAITING_FOR_OPPONENT) {
@@ -92,36 +92,36 @@ bool GameState::check_timeout() {
     return false;
 }
 
-GameId GameState::get_id() const { return game_id; }
+GameId Game::get_id() const { return game_id; }
 
-PlayerId GameState::get_a_id() const { return player_a_id; }
+PlayerId Game::get_a_id() const { return player_a_id; }
 
-PlayerId GameState::get_b_id() const { return player_b_id; }
+PlayerId Game::get_b_id() const { return player_b_id; }
 
-GameStatus GameState::get_status() const { return status; }
+GameStatus Game::get_status() const { return status; }
 
-PawnIndex GameState::get_max_pawn() const { return max_pawn; }
+PawnIndex Game::get_max_pawn() const { return max_pawn; }
 
-std::array<std::byte, 32> GameState::get_pawns() const { return pawn_row; }
+std::array<std::byte, 32> Game::get_pawns() const { return pawn_row; }
 
-bool GameState::is_player_turn(const PlayerId player_id) const {
+bool Game::is_player_turn(const PlayerId player_id) const {
     if (status != GameStatus::TURN_A && status != GameStatus::TURN_B) return false;
     if (status == GameStatus::TURN_A && player_id != player_a_id) return false;
     if (status == GameStatus::TURN_B && player_id != player_b_id) return false;
     return true;
 }
 
-bool GameState::is_pawn(const PawnIndex index) const {
+bool Game::is_pawn(const PawnIndex index) const {
     auto [array_index, bit_mask] = get_byte_index_and_mask(index);
     return ((pawn_row[array_index] & bit_mask) == bit_mask);
 }
 
-void GameState::remove_pawn(const PawnIndex index) {
+void Game::remove_pawn(const PawnIndex index) {
     auto [array_index, bit_mask] = get_byte_index_and_mask(index);
     pawn_row[array_index] &= ~bit_mask;
 }
 
-void GameState::check_win_conditions() {
+void Game::check_win_conditions() {
     // Check if every pawn is removed.
     static constexpr std::array<std::byte, 32> empty_row{};
 
@@ -134,7 +134,7 @@ void GameState::check_win_conditions() {
     }
 }
 
-void GameState::switch_turn() {
+void Game::switch_turn() {
     if (status == GameStatus::TURN_A) {
         status = GameStatus::TURN_B;
     } else if (status == GameStatus::TURN_B) {
@@ -143,7 +143,7 @@ void GameState::switch_turn() {
 }
 
 // One player can play as both - that's why there is no 'else' statement.
-void GameState::update_last_seen(PlayerId player_id) {
+void Game::update_last_seen(PlayerId player_id) {
     auto now = std::chrono::steady_clock::now();
     if (player_id == player_a_id) {
         last_seen_a = now;
@@ -153,7 +153,7 @@ void GameState::update_last_seen(PlayerId player_id) {
     }
 }
 
-std::pair<size_t, std::byte> GameState::get_byte_index_and_mask(PawnIndex index) {
+std::pair<size_t, std::byte> Game::get_byte_index_and_mask(PawnIndex index) {
     // Pawn numbered 0 is the most significant bit.
     size_t array_index = index / CHAR_BIT;
     size_t bit_index = CHAR_BIT - 1 - (index % CHAR_BIT);
