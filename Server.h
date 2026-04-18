@@ -30,17 +30,17 @@ private:
 
     int init_socket() const;
 
-    static std::pair<std::vector<uint8_t>, sockaddr> receive_packet(int socket_fd);
+    static sockaddr receive_packet(int socket_fd, std::vector<std::byte>& buffer);
 
     void check_timeouts();
 
-    std::optional<uint8_t> validate_packet(std::vector<uint8_t> &packet);
-
     GameState *handle_message(Message &msg);
+
+    std::optional<uint8_t> validate_message(Message &msg);
 
     void send_game_state(struct sockaddr client, GameState *game);
 
-    void send_wrong_msg(struct sockaddr client, std::vector<uint8_t> &packet, uint8_t err_idx);
+    void send_wrong_msg(struct sockaddr client, std::vector<std::byte> &packet, uint8_t err_idx);
 
     GameState *handle_join(PlayerId player_id);
 
@@ -51,6 +51,10 @@ private:
     GameState *handle_keep_alive(PlayerId player_id, GameId game_id);
 
     GameState *handle_give_up(PlayerId player_id, GameId game_id);
+
+    static std::optional<uint8_t> validate_join(PlayerId player_id);
+
+    std::optional<uint8_t> validate_args(PlayerId player_id, GameId game_id);
 
     std::optional<GameId> generate_id();
 };

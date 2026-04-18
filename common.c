@@ -38,8 +38,8 @@ struct sockaddr_in get_server_address(char const *host, uint16_t port) {
     }
 
     struct sockaddr_in send_address;
-    send_address.sin_family = AF_INET;   // IPv4
-    send_address.sin_addr.s_addr =       // IP address
+    send_address.sin_family = AF_INET; // IPv4
+    send_address.sin_addr.s_addr = // IP address
             ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr;
     send_address.sin_port = htons(port); // port from the command line
 
@@ -62,6 +62,12 @@ void safe_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     }
 }
 
+ssize_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,
+                      struct sockaddr *src_addr, socklen_t *addrlen) {
+    ssize_t received = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+    if (received < 0) syserr("recvfrom");
+}
+
 
 // Following two functions come from Stevens' "UNIX Network Programming" book.
 // Read n bytes from a descriptor. Use in place of read() when fd is a stream socket.
@@ -73,14 +79,14 @@ ssize_t readn(int fd, void *vptr, size_t n) {
     nleft = n;
     while (nleft > 0) {
         if ((nread = read(fd, ptr, nleft)) < 0)
-            return nread;     // When error, return < 0.
+            return nread; // When error, return < 0.
         else if (nread == 0)
-            break;            // EOF
+            break; // EOF
 
         nleft -= nread;
         ptr += nread;
     }
-    return n - nleft;         // return >= 0
+    return n - nleft; // return >= 0
 }
 
 // Write n bytes to a descriptor.
@@ -88,11 +94,11 @@ ssize_t writen(int fd, const void *vptr, size_t n) {
     ssize_t nleft, nwritten;
     const char *ptr;
 
-    ptr = vptr;               // Can't do pointer arithmetic on void*.
+    ptr = vptr; // Can't do pointer arithmetic on void*.
     nleft = n;
     while (nleft > 0) {
         if ((nwritten = write(fd, ptr, nleft)) <= 0)
-            return nwritten;  // error
+            return nwritten; // error
 
         nleft -= nwritten;
         ptr += nwritten;

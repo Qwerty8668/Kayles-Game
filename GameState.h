@@ -30,6 +30,8 @@ public:
 
     void keep_alive(PlayerId player_id);
 
+    bool has_player(PlayerId player_id) const;
+
     bool check_timeout();
 
 private:

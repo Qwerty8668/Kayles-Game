@@ -2,6 +2,7 @@
 #define KAYLES_MESSAGE_H
 #include <cstdint>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "Types.h"
@@ -18,7 +19,7 @@ class Message {
 public:
     std::string serialize() const;
 
-    static Message deserialize(std::vector<uint8_t> buff);
+    static std::variant<Message, uint8_t> try_deserialize(const std::vector<std::byte>& buff);
 
     [[nodiscard]] MessageType get_type() const;
 
@@ -33,6 +34,28 @@ private:
     PlayerId player_id = 0;
     GameId game_id = 0;
     PawnIndex pawn = 0;
+
+    static std::variant<Message, uint8_t> try_deserialize_join(const std::vector<std::byte>& buff);
+
+    static std::variant<Message, uint8_t> try_deserialize_move(const std::vector<std::byte>& buff);
+
+    static std::variant<Message, uint8_t> try_deserialize_status(const std::vector<std::byte>& buff);
+
+    static MessageType extract_type(const std::byte *ptr);
+
+    static PlayerId extract_player_id(const std::byte *ptr);
+
+    static GameId extract_game_id(const std::byte *ptr);
+
+    static PawnIndex extract_pawn_idx(const std::byte *ptr);
+
+    void set_type(MessageType t);
+
+    void set_player_id(PlayerId p);
+
+    void set_game_id(GameId g);
+
+    void set_pawn_idx(PawnIndex p);
 };
 
 

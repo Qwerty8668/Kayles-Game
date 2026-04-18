@@ -60,6 +60,10 @@ void GameState::keep_alive(PlayerId player_id) {
     update_last_seen(player_id);
 }
 
+bool GameState::has_player(PlayerId player_id) const {
+    return (player_id == player_a_id || player_id == player_b_id);
+}
+
 /* Returns true if game can be deleted. False otherwise */
 bool GameState::check_timeout() {
     auto now = std::chrono::steady_clock::now();
@@ -126,11 +130,14 @@ void GameState::switch_turn() {
     }
 }
 
+// One player can play as both - that's why there is no 'else' statement.
 void GameState::update_last_seen(PlayerId player_id) {
+    auto now = std::chrono::steady_clock::now();
     if (player_id == player_a_id) {
-        last_seen_a = std::chrono::steady_clock::now();
-    } else if (player_id == player_b_id) {
-        last_seen_b = std::chrono::steady_clock::now();
+        last_seen_a = now;
+    }
+    if (player_id == player_b_id) {
+        last_seen_b = now;
     }
 }
 

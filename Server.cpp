@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include "err.h"
 #include "common.h"
 
 constexpr size_t BUFFER_SIZE = 1024;
@@ -18,40 +17,51 @@ Server::Server(std::array<std::byte, 32> &pawn_row, PawnIndex max_pawn, std::str
 void Server::run() {
     int socket_fd = init_socket();
 
+    std::vector<std::byte> packet(BUFFER_SIZE);
     while (true) {
-        auto [packet, client] = receive_packet(socket_fd);
+        sockaddr client = receive_packet(socket_fd, packet);
         check_timeouts();
-        std::optional<uint8_t> error_id = validate_packet(packet);
-        if (!error_id.has_value()) {
-            Message msg = Message::deserialize(packet);
-            GameState *game_ptr = handle_message(msg);
-            send_game_state(client, game_ptr);
-        } else {
-            send_wrong_msg(client, packet, error_id.value());
+
+        auto result = Message::try_deserialize(packet);
+
+        if (std::holds_alternative<uint8_t>(result)) {
+            uint8_t error_idx = std::get<uint8_t>(result);
+            send_wrong_msg(client, packet, error_idx);
+            continue;
         }
+
+        Message msg = std::get<Message>(result);
+
+        auto opt_error_idx = validate_message(msg);
+        if (opt_error_idx.has_value()) {
+            uint8_t error_idx = opt_error_idx.value();
+            send_wrong_msg(client, packet, error_idx);
+            continue;
+        }
+
+        GameState *game_ptr = handle_message(msg);
+        send_game_state(client, game_ptr);
     }
 }
 
 int Server::init_socket() const {
     int socket_fd = safe_socket(AF_INET, SOCK_DGRAM, 0);
+
     struct sockaddr_in server_address = get_server_address(ip_address.c_str(), port);
+
     safe_bind(socket_fd, reinterpret_cast<struct sockaddr *>(&server_address),
               sizeof server_address);
     return socket_fd;
 }
 
-std::pair<std::vector<uint8_t>, sockaddr> Server::receive_packet(int socket_fd) {
-    std::vector<uint8_t> buffer(BUFFER_SIZE);
-
-    struct sockaddr client_address;
+sockaddr Server::receive_packet(int socket_fd, std::vector<std::byte> &buffer) {
+    struct sockaddr client_address{};
     socklen_t socklen = sizeof(client_address);
-
-    ssize_t received = recvfrom(socket_fd, buffer.data(), buffer.size(), 0,
-                                &client_address, &socklen);
-    if (received < 0) syserr("recvfrom");
+    ssize_t received = safe_recvfrom(socket_fd, buffer.data(), buffer.size(), 0,
+                                     &client_address, &socklen);
 
     buffer.resize(received);
-    return {buffer, client_address};
+    return client_address;
 }
 
 void Server::check_timeouts() {
@@ -63,9 +73,6 @@ void Server::check_timeouts() {
             ++it;
         }
     }
-}
-
-std::optional<uint8_t> Server::validate_packet(std::vector<uint8_t> &packet) {
 }
 
 GameState *Server::handle_message(Message &msg) {
@@ -80,14 +87,30 @@ GameState *Server::handle_message(Message &msg) {
             return handle_keep_alive(msg.get_player_id(), msg.get_game_id());
         case MessageType::MSG_GIVE_UP:
             return handle_give_up(msg.get_player_id(), msg.get_game_id());
+        default:
+            return nullptr;
     }
-    return nullptr;
+}
+
+std::optional<uint8_t> Server::validate_message(Message &msg) {
+    switch (msg.get_type()) {
+        case MessageType::MSG_JOIN:
+            return validate_join(msg.get_player_id());
+        case MessageType::MSG_MOVE_1:
+        case MessageType::MSG_MOVE_2:
+        case MessageType::MSG_KEEP_ALIVE:
+        case MessageType::MSG_GIVE_UP:
+            return validate_args(msg.get_player_id(), msg.get_game_id());
+        default:
+            return std::nullopt;
+    }
 }
 
 void Server::send_game_state(struct sockaddr client, GameState *game) {
 }
 
-void Server::send_wrong_msg(struct sockaddr client, std::vector<uint8_t> &packet, uint8_t err_idx) {
+void Server::send_wrong_msg(struct sockaddr client, std::vector<std::byte> &packet,
+                            uint8_t err_idx) {
 }
 
 GameState *Server::handle_join(PlayerId player_id) {
@@ -134,6 +157,29 @@ GameState *Server::handle_give_up(PlayerId player_id, GameId game_id) {
     GameState *game = &games.at(game_id);
     game->give_up(player_id);
     return game;
+}
+
+std::optional<uint8_t> Server::validate_join(PlayerId player_id) {
+    if (player_id == 0) {
+        return sizeof(MessageType);
+    }
+    return std::nullopt;
+}
+
+std::optional<uint8_t> Server::validate_args(PlayerId player_id, GameId game_id) {
+    size_t pos = sizeof(MessageType);
+
+    if (player_id == 0) return pos;
+    pos += sizeof(PlayerId);
+
+    if (!games.contains(game_id)) return pos;
+
+    GameState *game = &games.at(game_id);
+    if (!game->has_player(player_id)) {
+        return pos;
+    }
+
+    return std::nullopt;
 }
 
 std::optional<GameId> Server::generate_id() {
