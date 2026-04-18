@@ -6,7 +6,7 @@
 #include <sys/types.h>
 
 uint16_t read_port(char const *string);
-struct sockaddr_in get_server_address(char const *host, uint16_t port);
+struct sockaddr_in get_address(char const *host, uint16_t port);
 int safe_socket(int domain, int type, int protocol);
 void safe_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 size_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,

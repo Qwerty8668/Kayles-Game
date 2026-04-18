@@ -51,7 +51,7 @@ void Server::run() {
 int Server::init_socket() const {
     int socket_fd = safe_socket(AF_INET, SOCK_DGRAM, 0);
 
-    struct sockaddr_in server_address = get_server_address(ip_address.c_str(), port);
+    struct sockaddr_in server_address = get_address(ip_address.c_str(), port);
 
     safe_bind(socket_fd, reinterpret_cast<struct sockaddr *>(&server_address),
               sizeof server_address);
