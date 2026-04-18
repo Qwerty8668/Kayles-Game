@@ -34,6 +34,18 @@ public:
 
     bool check_timeout();
 
+    [[nodiscard]] GameId get_id() const;
+
+    [[nodiscard]] PlayerId get_a_id() const;
+
+    [[nodiscard]] PlayerId get_b_id() const;
+
+    [[nodiscard]] GameStatus get_status() const;
+
+    [[nodiscard]] PawnIndex get_max_pawn() const;
+
+    [[nodiscard]] std::array<std::byte, 32> get_pawns() const;
+
 private:
     GameId game_id;
     PlayerId player_a_id;
@@ -47,7 +59,7 @@ private:
 
     bool is_player_turn(PlayerId player_id) const;
 
-    bool is_pawn(PawnIndex index);
+    bool is_pawn(PawnIndex index) const;
 
     void remove_pawn(PawnIndex index);
 

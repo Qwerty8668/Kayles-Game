@@ -2,13 +2,10 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <inttypes.h>
-#include <limits.h>
 #include <netdb.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <signal.h>
 
 #include "err.h"
@@ -62,48 +59,18 @@ void safe_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     }
 }
 
-ssize_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,
+size_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,
                       struct sockaddr *src_addr, socklen_t *addrlen) {
     ssize_t received = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
     if (received < 0) syserr("recvfrom");
+    return received;
 }
 
-
-// Following two functions come from Stevens' "UNIX Network Programming" book.
-// Read n bytes from a descriptor. Use in place of read() when fd is a stream socket.
-ssize_t readn(int fd, void *vptr, size_t n) {
-    ssize_t nleft, nread;
-    char *ptr;
-
-    ptr = vptr;
-    nleft = n;
-    while (nleft > 0) {
-        if ((nread = read(fd, ptr, nleft)) < 0)
-            return nread; // When error, return < 0.
-        else if (nread == 0)
-            break; // EOF
-
-        nleft -= nread;
-        ptr += nread;
+void safe_sendto(int sockfd, const void *buf, size_t len, int flags,
+               const struct sockaddr *dest_addr, socklen_t addrlen) {
+    if (sendto(sockfd, buf, len, flags, dest_addr, addrlen) < 0) {
+        syserr("sendto");
     }
-    return n - nleft; // return >= 0
-}
-
-// Write n bytes to a descriptor.
-ssize_t writen(int fd, const void *vptr, size_t n) {
-    ssize_t nleft, nwritten;
-    const char *ptr;
-
-    ptr = vptr; // Can't do pointer arithmetic on void*.
-    nleft = n;
-    while (nleft > 0) {
-        if ((nwritten = write(fd, ptr, nleft)) <= 0)
-            return nwritten; // error
-
-        nleft -= nwritten;
-        ptr += nwritten;
-    }
-    return n;
 }
 
 void install_signal_handler(int signal, void (*handler)(int), int flags) {

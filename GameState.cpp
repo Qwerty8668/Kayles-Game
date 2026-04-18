@@ -92,6 +92,18 @@ bool GameState::check_timeout() {
     return false;
 }
 
+GameId GameState::get_id() const { return game_id; }
+
+PlayerId GameState::get_a_id() const { return player_a_id; }
+
+PlayerId GameState::get_b_id() const { return player_b_id; }
+
+GameStatus GameState::get_status() const { return status; }
+
+PawnIndex GameState::get_max_pawn() const { return max_pawn; }
+
+std::array<std::byte, 32> GameState::get_pawns() const { return pawn_row; }
+
 bool GameState::is_player_turn(const PlayerId player_id) const {
     if (status != GameStatus::TURN_A && status != GameStatus::TURN_B) return false;
     if (status == GameStatus::TURN_A && player_id != player_a_id) return false;
@@ -99,7 +111,7 @@ bool GameState::is_player_turn(const PlayerId player_id) const {
     return true;
 }
 
-bool GameState::is_pawn(const PawnIndex index) {
+bool GameState::is_pawn(const PawnIndex index) const {
     auto [array_index, bit_mask] = get_byte_index_and_mask(index);
     return ((pawn_row[array_index] & bit_mask) == bit_mask);
 }

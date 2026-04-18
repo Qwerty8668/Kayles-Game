@@ -1,10 +1,12 @@
-#include "Server.h"
-
 #include <memory>
 #include <sys/socket.h>
-#include <arpa/inet.h>
+
+#include "Server.h"
+
+#include <iostream>
 
 #include "common.h"
+#include "Protocol.h"
 
 constexpr size_t BUFFER_SIZE = 1024;
 
@@ -16,17 +18,18 @@ Server::Server(std::array<std::byte, 32> &pawn_row, PawnIndex max_pawn, std::str
 
 void Server::run() {
     int socket_fd = init_socket();
+    std::cout << "Server started." << std::endl;
 
     std::vector<std::byte> packet(BUFFER_SIZE);
     while (true) {
-        sockaddr client = receive_packet(socket_fd, packet);
+        sockaddr_in client = receive_packet(socket_fd, packet);
         check_timeouts();
 
-        auto result = Message::try_deserialize(packet);
+        auto result = Protocol::try_deserialize_request(packet);
 
         if (std::holds_alternative<uint8_t>(result)) {
             uint8_t error_idx = std::get<uint8_t>(result);
-            send_wrong_msg(client, packet, error_idx);
+            send_wrong_msg(socket_fd, client, packet, error_idx);
             continue;
         }
 
@@ -35,12 +38,13 @@ void Server::run() {
         auto opt_error_idx = validate_message(msg);
         if (opt_error_idx.has_value()) {
             uint8_t error_idx = opt_error_idx.value();
-            send_wrong_msg(client, packet, error_idx);
+            send_wrong_msg(socket_fd, client, packet, error_idx);
             continue;
         }
 
         GameState *game_ptr = handle_message(msg);
-        send_game_state(client, game_ptr);
+        if (game_ptr != nullptr)
+            send_game_state(socket_fd, client, *game_ptr);
     }
 }
 
@@ -54,11 +58,13 @@ int Server::init_socket() const {
     return socket_fd;
 }
 
-sockaddr Server::receive_packet(int socket_fd, std::vector<std::byte> &buffer) {
-    struct sockaddr client_address{};
+sockaddr_in Server::receive_packet(int socket_fd, std::vector<std::byte> &buffer) {
+    buffer.resize(BUFFER_SIZE);
+    struct sockaddr_in client_address{};
     socklen_t socklen = sizeof(client_address);
-    ssize_t received = safe_recvfrom(socket_fd, buffer.data(), buffer.size(), 0,
-                                     &client_address, &socklen);
+    size_t received = safe_recvfrom(socket_fd, buffer.data(), buffer.size(), 0,
+                                     reinterpret_cast<struct sockaddr *>(&client_address),
+                                     &socklen);
 
     buffer.resize(received);
     return client_address;
@@ -102,15 +108,21 @@ std::optional<uint8_t> Server::validate_message(Message &msg) {
         case MessageType::MSG_GIVE_UP:
             return validate_args(msg.get_player_id(), msg.get_game_id());
         default:
-            return std::nullopt;
+            return static_cast<uint8_t>(0);
     }
 }
 
-void Server::send_game_state(struct sockaddr client, GameState *game) {
+void Server::send_game_state(int sockfd, struct sockaddr_in client, const GameState &game) {
+    std::vector<std::byte> buffer = Protocol::serialize_game_state(game);
+    safe_sendto(sockfd, buffer.data(), buffer.size(), 0,
+                reinterpret_cast<struct sockaddr *>(&client), sizeof(client));
 }
 
-void Server::send_wrong_msg(struct sockaddr client, std::vector<std::byte> &packet,
+void Server::send_wrong_msg(int sockfd, struct sockaddr_in client, std::vector<std::byte> &packet,
                             uint8_t err_idx) {
+    std::vector<std::byte> buffer = Protocol::serialize_wrong_msg(packet, err_idx);
+    safe_sendto(sockfd, buffer.data(), buffer.size(), 0,
+                reinterpret_cast<struct sockaddr *>(&client), sizeof(client));
 }
 
 GameState *Server::handle_join(PlayerId player_id) {

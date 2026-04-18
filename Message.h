@@ -17,10 +17,6 @@ enum class MessageType : uint8_t {
 
 class Message {
 public:
-    std::string serialize() const;
-
-    static std::variant<Message, uint8_t> try_deserialize(const std::vector<std::byte>& buff);
-
     [[nodiscard]] MessageType get_type() const;
 
     [[nodiscard]] uint32_t get_player_id() const;
@@ -29,26 +25,6 @@ public:
 
     [[nodiscard]] uint8_t get_pawn() const;
 
-private:
-    MessageType msg_type = MessageType::MSG_JOIN;
-    PlayerId player_id = 0;
-    GameId game_id = 0;
-    PawnIndex pawn = 0;
-
-    static std::variant<Message, uint8_t> try_deserialize_join(const std::vector<std::byte>& buff);
-
-    static std::variant<Message, uint8_t> try_deserialize_move(const std::vector<std::byte>& buff);
-
-    static std::variant<Message, uint8_t> try_deserialize_status(const std::vector<std::byte>& buff);
-
-    static MessageType extract_type(const std::byte *ptr);
-
-    static PlayerId extract_player_id(const std::byte *ptr);
-
-    static GameId extract_game_id(const std::byte *ptr);
-
-    static PawnIndex extract_pawn_idx(const std::byte *ptr);
-
     void set_type(MessageType t);
 
     void set_player_id(PlayerId p);
@@ -56,6 +32,12 @@ private:
     void set_game_id(GameId g);
 
     void set_pawn_idx(PawnIndex p);
+
+private:
+    MessageType msg_type = MessageType::MSG_JOIN;
+    PlayerId player_id = 0;
+    GameId game_id = 0;
+    PawnIndex pawn = 0;
 };
 
 

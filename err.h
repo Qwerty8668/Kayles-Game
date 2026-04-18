@@ -4,10 +4,10 @@
 #include <stdnoreturn.h>
 
 // Print information about a system error and quits.
-noreturn void syserr(const char* fmt, ...);
+[[noreturn]] void syserr(const char* fmt, ...);
 
 // Print information about an error and quits.
-noreturn void fatal(const char* fmt, ...);
+[[noreturn]] void fatal(const char* fmt, ...);
 
 // Print information about an error and return.
 void error(const char* fmt, ...);

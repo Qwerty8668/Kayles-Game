@@ -1,6 +1,6 @@
 #ifndef KAYLES_TYPES_H
 #define KAYLES_TYPES_H
-#include <cstdint>
+#include <limits>
 
 using PlayerId = uint32_t;
 using GameId = uint32_t;
