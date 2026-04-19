@@ -17,7 +17,8 @@ enum class GameStatus : uint8_t {
 
 class Game {
 public:
-    Game(GameId id, PlayerId a_id, PawnIndex max_pawn, const std::array<std::byte, 32>& pawns,  std::chrono::seconds timeout);
+    Game(GameId id, PlayerId a_id, PawnIndex max_pawn, const std::array<std::byte, 32> &pawns,
+         std::chrono::seconds timeout);
 
     bool make_single_move(PawnIndex index, PlayerId player_id);
 
@@ -50,7 +51,7 @@ private:
     PlayerId player_a_id;
     PlayerId player_b_id = 0;
     GameStatus status = GameStatus::WAITING_FOR_OPPONENT;
-    PawnIndex  max_pawn;
+    PawnIndex max_pawn;
     std::array<std::byte, 32> pawn_row;
     std::chrono::steady_clock::time_point last_seen_a;
     std::chrono::steady_clock::time_point last_seen_b;

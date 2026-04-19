@@ -71,6 +71,9 @@ size_t Server::receive_packet(int socket_fd, std::span<std::byte> buffer,
 void Server::check_timeouts() {
     for (auto it = games.begin(); it != games.end();) {
         if (it->second.check_timeout()) {
+            if (pending_game_id.has_value() && pending_game_id.value() == it->first) {
+                pending_game_id.reset();
+            }
             it = games.erase(it);
         } else {
             ++it;

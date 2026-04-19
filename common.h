@@ -1,7 +1,6 @@
 #ifndef MIM_COMMON_H
 #define MIM_COMMON_H
 #include <chrono>
-#include <cstdint>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -26,7 +25,5 @@ void safe_setsockopt(int sockfd, int level, int optname, const void *optval, soc
 void safe_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 
 ssize_t safe_timeout_recv(int sockfd, void *buf, size_t len, int flags);
-
-void install_signal_handler(int signal, void (*handler)(int), int flags);
 
 #endif

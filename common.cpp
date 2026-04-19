@@ -1,12 +1,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <errno.h>
-#include <inttypes.h>
+#include <cerrno>
+#include <cinttypes>
 #include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "err.h"
 #include "common.h"
@@ -31,26 +30,26 @@ uint16_t read_port(char const *string) {
     if (errno != 0 || *endptr != 0 || port > UINT16_MAX) {
         fatal("%s is not a valid port number", string);
     }
-    return (uint16_t) port;
+    return static_cast<uint16_t>(port);
 }
 
 struct sockaddr_in get_address(char const *host, uint16_t port) {
-    struct addrinfo hints;
+    struct addrinfo hints{};
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
 
     struct addrinfo *address_result;
-    int errcode = getaddrinfo(host, NULL, &hints, &address_result);
+    int errcode = getaddrinfo(host, nullptr, &hints, &address_result);
     if (errcode != 0) {
         fatal("getaddrinfo: %s", gai_strerror(errcode));
     }
 
-    struct sockaddr_in send_address;
+    struct sockaddr_in send_address{};
     send_address.sin_family = AF_INET; // IPv4
     send_address.sin_addr.s_addr = // IP address
-            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr;
+            reinterpret_cast<struct sockaddr_in *>(address_result->ai_addr)->sin_addr.s_addr;
     send_address.sin_port = htons(port); // port from the command line
 
     freeaddrinfo(address_result);
@@ -74,8 +73,14 @@ void safe_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 
 size_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,
                       struct sockaddr *src_addr, socklen_t *addrlen) {
-    ssize_t received = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
-    if (received < 0) syserr("recvfrom");
+    ssize_t received;
+    do {
+        received = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+    } while (received < 0 && (errno == EINTR || errno == ECONNREFUSED));
+
+    if (received < 0) {
+        syserr("recvfrom returned an unexpected error");
+    }
     return received;
 }
 
@@ -112,18 +117,4 @@ ssize_t safe_timeout_recv(int sockfd, void *buf, size_t len, int flags) {
     }
 
     return res;
-}
-
-void install_signal_handler(int signal, void (*handler)(int), int flags) {
-    struct sigaction action;
-    sigset_t block_mask;
-
-    sigemptyset(&block_mask);
-    action.sa_handler = handler;
-    action.sa_mask = block_mask;
-    action.sa_flags = flags;
-
-    if (sigaction(signal, &action, NULL) < 0) {
-        syserr("sigaction");
-    }
 }
