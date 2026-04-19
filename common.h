@@ -1,7 +1,10 @@
 #ifndef MIM_COMMON_H
 #define MIM_COMMON_H
+#include <chrono>
 #include <cstdint>
 #include <sys/types.h>
+
+std::chrono::seconds read_timeout(char const *t);
 
 uint16_t read_port(char const *string);
 

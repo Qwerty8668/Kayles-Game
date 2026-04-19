@@ -1,16 +1,77 @@
+#include <iostream>
+#include <limits.h>
+#include <bits/getopt_core.h>
 
-
+#include "common.h"
+#include "err.h"
 #include "Server.h"
 
-int main() {
+std::array<std::byte, 32> read_pawn_row(const std::string& input) {
+    if (input.empty() || input.length() > 256) {
+        fatal("Invalid pawn row");
+    }
 
-    std::array<std::byte, 32> pawns{};
+    if (input.front() != '1' || input.back() != '1') {
+        fatal("Invalid pawn row");
+    }
 
-    std::ranges::fill(pawns, static_cast<std::byte>(255));
+    std::array<std::byte, 32> arr{};
 
-    std::string ip = "127.0.0.1";
+    for (size_t i = 0; i < input.length(); ++i) {
+        if (input[i] == '1') {
+            size_t byte_idx = i / CHAR_BIT;
+            size_t bit_offset = CHAR_BIT - 1 - (i % CHAR_BIT);
 
-    Server server = Server(pawns, 255, ip, 1234, std::chrono::seconds(10));
+            arr[byte_idx] |= static_cast<std::byte>(1 << bit_offset);
+
+        } else if (input[i] != '0') {
+            fatal("Invalid pawn row");
+        }
+    }
+
+    return arr;
+}
+
+int main(int argc, char* argv[]) {
+    std::string address;
+    std::array<std::byte, 32> pawn_row{};
+    uint8_t max_pawn = 0;
+    uint16_t port = -1;
+    std::chrono::seconds timeout;
+
+    bool has_r = false, has_a = false, has_p = false, has_t = false;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "r:a:p:t:")) != -1) {
+        switch (opt) {
+            case 'r':
+                max_pawn = static_cast<uint8_t>(sizeof(optarg));
+                pawn_row = read_pawn_row(optarg);
+                has_r = true;
+                break;
+            case 'a':
+                address = optarg;
+                has_a = true;
+                break;
+            case 'p':
+                port = read_port(optarg);
+                has_p = true;
+                break;
+            case 't':
+                timeout = read_timeout(optarg);
+                has_t = true;
+                break;
+            case '?':
+            default:
+                fatal("Unknown argument");
+        }
+    }
+
+    if (!has_r || !has_a || !has_p || !has_t) {
+        fatal("Missing required arguments");
+    }
+
+    Server server = Server(pawn_row, max_pawn, address, port, timeout);
 
     server.run();
 

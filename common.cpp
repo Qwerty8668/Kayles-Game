@@ -11,6 +11,18 @@
 #include "err.h"
 #include "common.h"
 
+#include <chrono>
+
+std::chrono::seconds read_timeout(char const *t) {
+    char *endptr;
+    errno = 0;
+    unsigned long timeout = strtoul(t, &endptr, 10);
+    if (errno != 0 || *endptr != 0 || timeout > 99 || timeout == 0) {
+        fatal("%s is not valid timeout", t);
+    }
+    std::chrono::seconds ret(timeout);
+}
+
 uint16_t read_port(char const *string) {
     char *endptr;
     errno = 0;
