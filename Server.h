@@ -24,7 +24,6 @@ private:
     std::string ip_address;
     uint16_t port;
     const std::chrono::seconds timeout;
-    std::queue<GameId> free_ids;
     std::map<GameId, Game> games;
     std::optional<GameId> pending_game_id;
     GameId next_game_id = 0;

@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <iomanip>
+#include <unistd.h>
 
 #include "common.h"
 #include "GameState.h"
@@ -44,6 +45,7 @@ void Client::run() {
         WrongMessage wrng_msg = std::get<WrongMessage>(response_val);
         print_wrong_msg(wrng_msg);
     }
+    close(socket_fd);
 }
 
 int Client::start_connection() {

@@ -71,7 +71,6 @@ size_t Server::receive_packet(int socket_fd, std::span<std::byte> buffer,
 void Server::check_timeouts() {
     for (auto it = games.begin(); it != games.end();) {
         if (it->second.check_timeout()) {
-            free_ids.push(it->first);
             it = games.erase(it);
         } else {
             ++it;
@@ -201,12 +200,6 @@ std::optional<uint8_t> Server::validate_args(PlayerId player_id, GameId game_id)
 }
 
 std::optional<GameId> Server::generate_id() {
-    if (!free_ids.empty()) {
-        GameId id = free_ids.front();
-        free_ids.pop();
-        return id;
-    }
-
     if (next_game_id < MAX_GAME_ID) {
         return next_game_id++;
     }
