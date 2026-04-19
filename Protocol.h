@@ -1,6 +1,7 @@
 #ifndef KAYLES_PROTOCOL_H
 #define KAYLES_PROTOCOL_H
 #include <variant>
+#include <optional>
 
 #include "Game.h"
 #include "GameState.h"

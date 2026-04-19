@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 #include <limits.h>
 #include <bits/getopt_core.h>
@@ -45,7 +46,7 @@ int main(int argc, char* argv[]) {
     while ((opt = getopt(argc, argv, "r:a:p:t:")) != -1) {
         switch (opt) {
             case 'r':
-                max_pawn = static_cast<uint8_t>(sizeof(optarg));
+                max_pawn = static_cast<uint8_t>(strlen(optarg) - 1);
                 pawn_row = read_pawn_row(optarg);
                 has_r = true;
                 break;

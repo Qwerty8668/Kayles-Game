@@ -21,6 +21,7 @@ std::chrono::seconds read_timeout(char const *t) {
         fatal("%s is not valid timeout", t);
     }
     std::chrono::seconds ret(timeout);
+    return ret;
 }
 
 uint16_t read_port(char const *string) {

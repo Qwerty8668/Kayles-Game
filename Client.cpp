@@ -2,8 +2,9 @@
 
 #include <bitset>
 #include <iostream>
-#include <bits/socket.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <iomanip>
 
 #include "common.h"
 #include "GameState.h"

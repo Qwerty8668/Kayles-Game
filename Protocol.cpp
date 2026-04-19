@@ -200,6 +200,31 @@ namespace {
         msg.status = status;
         return msg;
     }
+
+    std::vector<std::byte> serialize_join(const Message& msg) {
+        std::vector<std::byte> buff{};
+        insert_buffer_8(buff, static_cast<uint8_t>(msg.msg_type));
+        insert_buffer_32(buff, msg.player_id);
+        return buff;
+    }
+
+    std::vector<std::byte> serialize_move(const Message& msg) {
+        std::vector<std::byte> buff{};
+        insert_buffer_8(buff, static_cast<uint8_t>(msg.msg_type));
+        insert_buffer_32(buff, msg.player_id);
+        insert_buffer_32(buff, msg.game_id);
+        insert_buffer_8(buff, msg.pawn);
+        return buff;
+    }
+
+    std::vector<std::byte> serialize_status(const Message& msg) {
+        std::vector<std::byte> buff{};
+        insert_buffer_8(buff, static_cast<uint8_t>(msg.msg_type));
+        insert_buffer_32(buff, msg.player_id);
+        insert_buffer_32(buff, msg.game_id);
+        return buff;
+    }
+
 }
 
 namespace Protocol {
@@ -220,6 +245,21 @@ namespace Protocol {
             default:
                 return static_cast<uint8_t>(0);
         }
+    }
+
+    std::vector<std::byte> serialize_request(const Message& msg) {
+        switch (msg.msg_type) {
+            case MessageType::MSG_JOIN:
+                return serialize_join(msg);
+            case MessageType::MSG_MOVE_1:
+            case MessageType::MSG_MOVE_2:
+                return serialize_move(msg);
+            case MessageType::MSG_KEEP_ALIVE:
+            case MessageType::MSG_GIVE_UP:
+                return serialize_status(msg);
+        }
+        std::vector<std::byte> empty;
+        return empty;
     }
 
     std::vector<std::byte> serialize_game_state(const Game &game) {

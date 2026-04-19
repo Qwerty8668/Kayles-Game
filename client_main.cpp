@@ -40,7 +40,7 @@ Message read_message(const std::string& input) {
 
     Message msg;
     uint32_t type_val = safe_parse_uint(tokens[0]);
-    if (type_val > 5) {
+    if (type_val > 4) {
         fatal("Couldn't parse message.");
     }
     msg.msg_type = static_cast<MessageType>(type_val);
@@ -123,6 +123,10 @@ int main(int argc, char* argv[]) {
             default:
                 fatal("Unknown argument");
         }
+    }
+
+    if (port == 0) {
+        fatal("Port can't be 0.");
     }
 
     if (!has_a || !has_p || !has_m || !has_t) {

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <sys/types.h>
+#include <sys/socket.h>
 
 std::chrono::seconds read_timeout(char const *t);
 
