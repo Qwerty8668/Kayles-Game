@@ -2,8 +2,10 @@
 
 #include <cmath>
 #include <cstring>
-#include <math.h>
 #include <netinet/in.h>
+
+#include "GameState.h"
+#include "WrongMessage.h"
 
 namespace {
     MessageType extract_type(const std::byte *ptr) {
@@ -26,10 +28,16 @@ namespace {
         return g_id;
     }
 
-    PawnIndex extract_pawn_idx(const std::byte *ptr) {
+    PawnIndex extract_pawn(const std::byte *ptr) {
         PawnIndex pawn_idx;
         memcpy(&pawn_idx, ptr, sizeof(PawnIndex));
         return pawn_idx;
+    }
+
+    GameStatus extract_game_status(const std::byte *ptr) {
+        GameStatus gs{};
+        memcpy(&gs, ptr, sizeof(GameStatus));
+        return gs;
     }
 
     std::variant<Message, uint8_t> try_deserialize_join(const std::vector<std::byte> &buff) {
@@ -49,8 +57,8 @@ namespace {
         PlayerId p_id = extract_player_id(&buff[pos]);
 
         Message msg;
-        msg.set_type(type);
-        msg.set_player_id(p_id);
+        msg.msg_type = type;
+        msg.player_id = p_id;
 
         return msg;
     }
@@ -75,13 +83,13 @@ namespace {
         GameId g_id = extract_game_id(&buff[pos]);
         pos += sizeof(GameId);
 
-        PawnIndex pwn_idx = extract_pawn_idx(&buff[pos]);
+        PawnIndex pwn_idx = extract_pawn(&buff[pos]);
 
         Message msg;
-        msg.set_type(type);
-        msg.set_player_id(p_id);
-        msg.set_game_id(g_id);
-        msg.set_pawn_idx(pwn_idx);
+        msg.msg_type = type;
+        msg.player_id = p_id;
+        msg.game_id = g_id;
+        msg.pawn = pwn_idx;
 
         return msg;
     }
@@ -106,9 +114,9 @@ namespace {
         GameId g_id = extract_game_id(&buff[pos]);
 
         Message msg;
-        msg.set_type(type);
-        msg.set_player_id(p_id);
-        msg.set_game_id(g_id);
+        msg.msg_type = type;
+        msg.player_id = p_id;
+        msg.game_id = g_id;
 
         return msg;
     }
@@ -121,6 +129,76 @@ namespace {
 
     void insert_buffer_8(std::vector<std::byte> &buff, uint8_t value) {
         buff.push_back(static_cast<std::byte>(value));
+    }
+
+    std::optional<GameState> try_deserialize_game_state(
+        const std::vector<std::byte> &buff) {
+        size_t min_size = sizeof(GameId) + 2 * sizeof(PlayerId) + sizeof(GameStatus) + sizeof(
+                              PawnIndex);
+        if (buff.size() < min_size) {
+            return std::nullopt;
+        }
+
+        size_t pos = 0;
+
+        GameId g_id = extract_game_id(&buff[pos]);
+        pos += sizeof(GameId);
+
+        PlayerId p_a_id = extract_player_id(&buff[pos]);
+        pos += sizeof(PlayerId);
+
+        PlayerId p_b_id = extract_player_id(&buff[pos]);
+        pos += sizeof(PlayerId);
+
+        GameStatus gs = extract_game_status(&buff[pos]);
+        pos += sizeof(GameStatus);
+
+        PawnIndex pwn_max = extract_pawn(&buff[pos]);
+        pos += sizeof(PawnIndex);
+
+        size_t array_size = (pwn_max / 8) + 1;
+
+        if (buff.size() < pos + array_size) {
+            return std::nullopt;
+        }
+
+        std::array<std::byte, 32> pawn_row{};
+
+        for (size_t i = 0; i < array_size; i++) {
+            pawn_row[i] = static_cast<std::byte>(buff[pos + i]);
+        }
+
+        GameState state{};
+        state.game_id = g_id;
+        state.player_a_id = p_a_id;
+        state.player_b_id = p_b_id;
+        state.status = gs;
+        state.max_pawn = pwn_max;
+        state.pawn_row = pawn_row;
+        return state;
+    }
+
+    std::optional<WrongMessage> try_deserialize_wrong_msg(
+        const std::vector<std::byte> &buff) {
+        if (buff.size() != 14) {
+            return std::nullopt;
+        }
+
+        std::array<std::byte, 12> bytes{};
+
+        for (int i = 0; i < 12; i++) {
+            bytes[i] = static_cast<std::byte>(buff[i]);
+        }
+
+        uint8_t status = 255;
+
+        auto error_idx = static_cast<std::uint8_t>(buff[13]);
+
+        WrongMessage msg{};
+        msg.first_bytes = bytes;
+        msg.error_idx = error_idx;
+        msg.status = status;
+        return msg;
     }
 }
 
@@ -175,5 +253,23 @@ namespace Protocol {
         buff.push_back(static_cast<std::byte>(err_idx));
 
         return buff;
+    }
+
+    std::optional<std::variant<GameState, WrongMessage> > try_deserialize_response(
+        const std::vector<std::byte> &buff) {
+        // 13th byte is the status.
+        if (buff.size() < 13) {
+            return std::nullopt;
+        }
+
+        uint8_t status;
+        memcpy(&status, &buff[12], sizeof(status));
+        if (status < 5) {
+            return try_deserialize_game_state(buff);
+        }
+        if (status == 255) {
+            return try_deserialize_wrong_msg(buff);
+        }
+        return std::nullopt;
     }
 }

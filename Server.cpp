@@ -8,8 +8,6 @@
 #include "common.h"
 #include "Protocol.h"
 
-constexpr size_t BUFFER_SIZE = 1024;
-
 Server::Server(std::array<std::byte, 32> &pawn_row, PawnIndex max_pawn, std::string &ip_address,
                uint16_t port,
                std::chrono::seconds timeout)
@@ -82,31 +80,31 @@ void Server::check_timeouts() {
 }
 
 Game *Server::handle_message(Message &msg) {
-    switch (msg.get_type()) {
+    switch (msg.msg_type) {
         case MessageType::MSG_JOIN:
-            return handle_join(msg.get_player_id());
+            return handle_join(msg.player_id);
         case MessageType::MSG_MOVE_1:
-            return handle_move_1(msg.get_player_id(), msg.get_game_id(), msg.get_pawn());
+            return handle_move_1(msg.player_id, msg.game_id, msg.pawn);
         case MessageType::MSG_MOVE_2:
-            return handle_move_2(msg.get_player_id(), msg.get_game_id(), msg.get_pawn());
+            return handle_move_2(msg.player_id, msg.game_id, msg.pawn);
         case MessageType::MSG_KEEP_ALIVE:
-            return handle_keep_alive(msg.get_player_id(), msg.get_game_id());
+            return handle_keep_alive(msg.player_id, msg.game_id);
         case MessageType::MSG_GIVE_UP:
-            return handle_give_up(msg.get_player_id(), msg.get_game_id());
+            return handle_give_up(msg.player_id, msg.game_id);
         default:
             return nullptr;
     }
 }
 
 std::optional<uint8_t> Server::validate_message(Message &msg) {
-    switch (msg.get_type()) {
+    switch (msg.msg_type) {
         case MessageType::MSG_JOIN:
-            return validate_join(msg.get_player_id());
+            return validate_join(msg.player_id);
         case MessageType::MSG_MOVE_1:
         case MessageType::MSG_MOVE_2:
         case MessageType::MSG_KEEP_ALIVE:
         case MessageType::MSG_GIVE_UP:
-            return validate_args(msg.get_player_id(), msg.get_game_id());
+            return validate_args(msg.player_id, msg.game_id);
         default:
             return static_cast<uint8_t>(0);
     }

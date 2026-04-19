@@ -1,10 +1,6 @@
 #ifndef KAYLES_MESSAGE_H
 #define KAYLES_MESSAGE_H
 #include <cstdint>
-#include <string>
-#include <variant>
-#include <vector>
-
 #include "Types.h"
 
 enum class MessageType : uint8_t {
@@ -17,23 +13,6 @@ enum class MessageType : uint8_t {
 
 class Message {
 public:
-    [[nodiscard]] MessageType get_type() const;
-
-    [[nodiscard]] uint32_t get_player_id() const;
-
-    [[nodiscard]] uint32_t get_game_id() const;
-
-    [[nodiscard]] uint8_t get_pawn() const;
-
-    void set_type(MessageType t);
-
-    void set_player_id(PlayerId p);
-
-    void set_game_id(GameId g);
-
-    void set_pawn_idx(PawnIndex p);
-
-private:
     MessageType msg_type = MessageType::MSG_JOIN;
     PlayerId player_id = 0;
     GameId game_id = 0;

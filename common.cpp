@@ -73,6 +73,34 @@ void safe_sendto(int sockfd, const void *buf, size_t len, int flags,
     }
 }
 
+void safe_setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen) {
+    int res = setsockopt(sockfd, level, optname, optval, optlen);
+    if (res < 0) {
+        syserr("setsockopt");
+    }
+}
+
+void safe_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    int res = connect(sockfd, addr, addrlen);
+    if (res < 0) {
+        syserr("connect");
+    }
+}
+
+ssize_t safe_timeout_recv(int sockfd, void *buf, size_t len, int flags) {
+    ssize_t res = recv(sockfd, buf, len, flags);
+
+    if (res < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return -1;
+        } else {
+            syserr("recv");
+        }
+    }
+
+    return res;
+}
+
 void install_signal_handler(int signal, void (*handler)(int), int flags) {
     struct sigaction action;
     sigset_t block_mask;

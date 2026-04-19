@@ -3,7 +3,9 @@
 #include <variant>
 
 #include "Game.h"
+#include "GameState.h"
 #include "Message.h"
+#include "WrongMessage.h"
 
 
 namespace Protocol {
@@ -18,9 +20,10 @@ namespace Protocol {
 
     std::vector<std::byte> serialize_game_state(const Game& game);
 
-    Game deserialize_game_state(const std::vector<std::byte>& buff);
-
     std::vector<std::byte> serialize_wrong_msg(const std::vector<std::byte>& packet, uint8_t err_idx);
+
+    std::optional<std::variant<GameState, WrongMessage> > try_deserialize_response(
+        const std::vector<std::byte> &buff);
 
 };
 
