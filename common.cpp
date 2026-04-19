@@ -79,7 +79,7 @@ size_t safe_recvfrom(int sockfd, void *buf, size_t len, int flags,
     } while (received < 0 && (errno == EINTR || errno == ECONNREFUSED));
 
     if (received < 0) {
-        syserr("recvfrom returned an unexpected error");
+        syserr("recvfrom");
     }
     return received;
 }

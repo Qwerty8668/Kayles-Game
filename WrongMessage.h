@@ -3,9 +3,11 @@
 #include <array>
 #include <cstdint>
 
+#include "Types.h"
+
 class WrongMessage {
 public:
-    std::array<std::byte, 12> first_bytes;
+    std::array<std::byte, WRNG_MSG_BYTES_SIZE> first_bytes;
     uint8_t status;
     uint8_t error_idx;
 };

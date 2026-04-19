@@ -72,7 +72,7 @@ void Server::check_timeouts() {
     static auto last_cleanup = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
 
-    if (now - last_cleanup < std::chrono::milliseconds(500)) {
+    if (now - last_cleanup < std::chrono::milliseconds(50)) {
         return;
     }
 

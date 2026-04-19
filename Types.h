@@ -12,5 +12,7 @@ constexpr GameId MAX_GAME_ID = std::numeric_limits<GameId>::max();
 constexpr GameId MAX_PAWN_IDX = std::numeric_limits<PawnIndex>::max();
 
 constexpr size_t BUFFER_SIZE = 1024;
+constexpr size_t WRNG_MSG_BYTES_SIZE = 12;
+constexpr uint8_t ERR_STATUS = 255;
 
 #endif //KAYLES_TYPES_H

@@ -185,19 +185,19 @@ namespace {
 
     std::optional<WrongMessage> try_deserialize_wrong_msg(
         std::span<const std::byte> buff) {
-        if (buff.size() != 14) {
+        if (buff.size() != WRNG_MSG_BYTES_SIZE + 2) {
             return std::nullopt;
         }
 
-        std::array<std::byte, 12> bytes{};
+        std::array<std::byte, WRNG_MSG_BYTES_SIZE> bytes{};
 
-        for (int i = 0; i < 12; i++) {
+        for (size_t i = 0; i < WRNG_MSG_BYTES_SIZE; i++) {
             bytes[i] = static_cast<std::byte>(buff[i]);
         }
 
-        uint8_t status = 255;
+        uint8_t status = ERR_STATUS;
 
-        auto error_idx = static_cast<std::uint8_t>(buff[13]);
+        auto error_idx = static_cast<std::uint8_t>(buff[WRNG_MSG_BYTES_SIZE + 1]);
 
         WrongMessage msg{};
         msg.first_bytes = bytes;
@@ -254,16 +254,16 @@ namespace Protocol {
     std::optional<std::variant<GameState, WrongMessage> > try_deserialize_response(
         std::span<const std::byte> buff) {
         // 13th byte is the status.
-        if (buff.size() < 13) {
+        if (buff.size() < WRNG_MSG_BYTES_SIZE + 1) {
             return std::nullopt;
         }
 
         uint8_t status;
-        memcpy(&status, &buff[12], sizeof(status));
+        memcpy(&status, &buff[WRNG_MSG_BYTES_SIZE], sizeof(status));
         if (status < 5) {
             return try_deserialize_game_state(buff);
         }
-        if (status == 255) {
+        if (status == ERR_STATUS) {
             return try_deserialize_wrong_msg(buff);
         }
         return std::nullopt;
@@ -302,23 +302,23 @@ namespace Protocol {
 
     size_t serialize_wrong_msg(std::span<const std::byte> packet,
                                uint8_t err_idx, std::span<std::byte> buff) {
-        if (buff.size() < 14) {
+        if (buff.size() < WRNG_MSG_BYTES_SIZE + 2) {
             return 0;
         }
 
-        size_t copy_len = std::min<size_t>(packet.size(), 12);
+        size_t copy_len = std::min<size_t>(packet.size(), WRNG_MSG_BYTES_SIZE);
         if (copy_len > 0) {
             std::memcpy(buff.data(), packet.data(), copy_len);
         }
 
-        if (copy_len < 12) {
-            std::memset(buff.data() + copy_len, 0, 12 - copy_len);
+        if (copy_len < WRNG_MSG_BYTES_SIZE) {
+            std::memset(buff.data() + copy_len, 0, WRNG_MSG_BYTES_SIZE - copy_len);
         }
 
-        buff[12] = static_cast<std::byte>(255);
+        buff[WRNG_MSG_BYTES_SIZE] = static_cast<std::byte>(ERR_STATUS);
 
-        buff[13] = static_cast<std::byte>(err_idx);
+        buff[WRNG_MSG_BYTES_SIZE + 1] = static_cast<std::byte>(err_idx);
 
-        return 14;
+        return WRNG_MSG_BYTES_SIZE + 2;
     }
 }
