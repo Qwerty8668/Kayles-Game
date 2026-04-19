@@ -59,7 +59,7 @@ int Server::init_socket() const {
     return socket_fd;
 }
 
-size_t Server::receive_packet(int socket_fd, std::array<std::byte, BUFFER_SIZE> &buffer,
+size_t Server::receive_packet(int socket_fd, std::span<std::byte> buffer,
                               sockaddr_in &client_address) {
     socklen_t socklen = sizeof(client_address);
     size_t received = safe_recvfrom(socket_fd, buffer.data(), buffer.size(), 0,

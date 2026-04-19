@@ -31,7 +31,7 @@ private:
 
     int init_socket() const;
 
-    static size_t receive_packet(int socket_fd, std::array<std::byte, 1024> &buffer,
+    static size_t receive_packet(int socket_fd, std::span<std::byte> buffer,
                                  sockaddr_in &client_address);
 
     void check_timeouts();

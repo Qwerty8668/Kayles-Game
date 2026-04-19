@@ -40,7 +40,7 @@ namespace {
         return gs;
     }
 
-    std::variant<Message, uint8_t> try_deserialize_join(const std::span<const std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_join(std::span<const std::byte> buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId);
         if (buff.size() < size) {
             return static_cast<uint8_t>(buff.size());
@@ -63,7 +63,7 @@ namespace {
         return msg;
     }
 
-    std::variant<Message, uint8_t> try_deserialize_move(const std::span<const std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_move(std::span<const std::byte> buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId) + sizeof(GameId) + sizeof(PawnIndex);
         if (buff.size() < size) {
             return static_cast<uint8_t>(buff.size());
@@ -94,7 +94,7 @@ namespace {
         return msg;
     }
 
-    std::variant<Message, uint8_t> try_deserialize_status(const std::span<const std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_status(std::span<const std::byte> buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId) + sizeof(GameId);
         if (buff.size() < size) {
             return static_cast<uint8_t>(buff.size());
@@ -137,7 +137,7 @@ namespace {
     }
 
     std::optional<GameState> try_deserialize_game_state(
-        const std::span<const std::byte> &buff) {
+        std::span<const std::byte> buff) {
         size_t min_size = sizeof(GameId) + 2 * sizeof(PlayerId) + sizeof(GameStatus) + sizeof(
                               PawnIndex);
         if (buff.size() < min_size) {
@@ -184,7 +184,7 @@ namespace {
     }
 
     std::optional<WrongMessage> try_deserialize_wrong_msg(
-        const std::span<const std::byte> &buff) {
+        std::span<const std::byte> buff) {
         if (buff.size() != 14) {
             return std::nullopt;
         }
@@ -232,7 +232,7 @@ namespace {
 }
 
 namespace Protocol {
-    std::variant<Message, uint8_t> try_deserialize_request(const std::span<const std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_request(std::span<const std::byte> buff) {
         if (buff.empty()) {
             return static_cast<uint8_t>(0);
         }
@@ -251,8 +251,8 @@ namespace Protocol {
         }
     }
 
-    std::optional<std::variant<GameState, WrongMessage>> try_deserialize_response(
-    const std::span<const std::byte> &buff) {
+    std::optional<std::variant<GameState, WrongMessage> > try_deserialize_response(
+        std::span<const std::byte> buff) {
         // 13th byte is the status.
         if (buff.size() < 13) {
             return std::nullopt;
@@ -301,7 +301,7 @@ namespace Protocol {
     }
 
     size_t serialize_wrong_msg(std::span<const std::byte> packet,
-                           uint8_t err_idx, std::span<std::byte> buff) {
+                               uint8_t err_idx, std::span<std::byte> buff) {
         if (buff.size() < 14) {
             return 0;
         }
