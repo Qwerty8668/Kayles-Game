@@ -69,6 +69,13 @@ size_t Server::receive_packet(int socket_fd, std::span<std::byte> buffer,
 }
 
 void Server::check_timeouts() {
+    static auto last_cleanup = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+
+    if (now - last_cleanup < std::chrono::milliseconds(500)) {
+        return;
+    }
+
     for (auto it = games.begin(); it != games.end();) {
         if (it->second.check_timeout()) {
             if (pending_game_id.has_value() && pending_game_id.value() == it->first) {
