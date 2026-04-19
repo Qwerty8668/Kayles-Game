@@ -19,23 +19,22 @@ Client::Client(std::string &ip_address, uint16_t port, Message message,
 void Client::run() {
     int socket_fd = start_connection();
 
-    std::vector<std::byte> packet = Protocol::serialize_request(message);
+    std::array<std::byte, BUFFER_SIZE> buff{};
+    size_t len = Protocol::serialize_request(message, buff);
+    std::span<const std::byte> packet_view(buff.data(), len);
 
-    struct sockaddr_in server_addr = send_packet(socket_fd, packet);
-
-    std::optional<std::vector<std::byte>> answer = wait_for_answer(socket_fd, server_addr);
-
-    if (!answer.has_value()) {
+    struct sockaddr_in server_addr = send_packet(socket_fd, packet_view);
+    ssize_t ans_len = wait_for_answer(socket_fd, server_addr, buff);
+    if (ans_len == -1) {
         print_no_answer();
         return;
     }
+    std::span<const std::byte> ans_view(buff.data(), ans_len);
 
-    auto response = Protocol::try_deserialize_response(answer.value());
-
+    auto response = Protocol::try_deserialize_response(ans_view);
     if (!response.has_value()) {
         print_wrong_answer();
     }
-
     auto response_val = response.value();
 
     if (std::holds_alternative<GameState>(response_val)) {
@@ -49,7 +48,7 @@ void Client::run() {
 
 int Client::start_connection() {
     int socket_fd = safe_socket(AF_INET, SOCK_DGRAM, 0);
-    struct timeval tv;
+    struct timeval tv{};
     tv.tv_sec = timeout.count();
     tv.tv_usec = 0;
 
@@ -57,22 +56,18 @@ int Client::start_connection() {
     return socket_fd;
 }
 
-struct sockaddr_in Client::send_packet(int sockfd, const std::vector<std::byte> &packet) {
+struct sockaddr_in Client::send_packet(int sockfd, const std::span<const std::byte> &packet) {
     struct sockaddr_in server = get_address(server_ip.c_str(), server_port);
     safe_sendto(sockfd, packet.data(), packet.size(), 0,
                 reinterpret_cast<struct sockaddr *>(&server), sizeof(server));
     return server;
 }
 
-std::optional<std::vector<std::byte>> Client::wait_for_answer(int sockfd, struct sockaddr_in server_addr) {
-    std::vector<std::byte> buffer(BUFFER_SIZE);
+ssize_t Client::wait_for_answer(int sockfd, struct sockaddr_in server_addr,
+                                std::span<std::byte> buffer) {
     safe_connect(sockfd, reinterpret_cast<struct sockaddr *>(&server_addr), sizeof(server_addr));
     ssize_t received = safe_timeout_recv(sockfd, buffer.data(), buffer.size(), 0);
-    if (received == -1) {
-        return std::nullopt;
-    }
-    buffer.resize(received);
-    return buffer;
+    return received;
 
 }
 

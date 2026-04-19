@@ -40,7 +40,7 @@ namespace {
         return gs;
     }
 
-    std::variant<Message, uint8_t> try_deserialize_join(const std::vector<std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_join(const std::span<const std::byte> &buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId);
         if (buff.size() < size) {
             return static_cast<uint8_t>(buff.size());
@@ -63,7 +63,7 @@ namespace {
         return msg;
     }
 
-    std::variant<Message, uint8_t> try_deserialize_move(const std::vector<std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_move(const std::span<const std::byte> &buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId) + sizeof(GameId) + sizeof(PawnIndex);
         if (buff.size() < size) {
             return static_cast<uint8_t>(buff.size());
@@ -94,7 +94,7 @@ namespace {
         return msg;
     }
 
-    std::variant<Message, uint8_t> try_deserialize_status(const std::vector<std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_status(const std::span<const std::byte> &buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId) + sizeof(GameId);
         if (buff.size() < size) {
             return static_cast<uint8_t>(buff.size());
@@ -121,18 +121,23 @@ namespace {
         return msg;
     }
 
-    void insert_buffer_32(std::vector<std::byte> &buff, uint32_t value) {
-        GameId net = htonl(value);
-        const auto *ptr = reinterpret_cast<const std::byte *>(&net);
-        buff.insert(buff.end(), ptr, ptr + sizeof(uint32_t));
+    void insert_buffer_32(std::span<std::byte> buff, size_t &pos, uint32_t value) {
+        uint32_t net = htonl(value);
+        if (pos + sizeof(uint32_t) > buff.size()) {
+            return;
+        }
+        std::memcpy(&buff[pos], &net, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
     }
 
-    void insert_buffer_8(std::vector<std::byte> &buff, uint8_t value) {
-        buff.push_back(static_cast<std::byte>(value));
+    void insert_buffer_8(std::span<std::byte> buff, size_t &pos, uint8_t value) {
+        if (pos + sizeof(uint8_t) > buff.size()) return;
+
+        buff[pos++] = static_cast<std::byte>(value);
     }
 
     std::optional<GameState> try_deserialize_game_state(
-        const std::vector<std::byte> &buff) {
+        const std::span<const std::byte> &buff) {
         size_t min_size = sizeof(GameId) + 2 * sizeof(PlayerId) + sizeof(GameStatus) + sizeof(
                               PawnIndex);
         if (buff.size() < min_size) {
@@ -179,7 +184,7 @@ namespace {
     }
 
     std::optional<WrongMessage> try_deserialize_wrong_msg(
-        const std::vector<std::byte> &buff) {
+        const std::span<const std::byte> &buff) {
         if (buff.size() != 14) {
             return std::nullopt;
         }
@@ -201,34 +206,33 @@ namespace {
         return msg;
     }
 
-    std::vector<std::byte> serialize_join(const Message& msg) {
-        std::vector<std::byte> buff{};
-        insert_buffer_8(buff, static_cast<uint8_t>(msg.msg_type));
-        insert_buffer_32(buff, msg.player_id);
-        return buff;
+    size_t serialize_join(const Message &msg, std::span<std::byte> buff) {
+        size_t pos = 0;
+        insert_buffer_8(buff, pos, static_cast<uint8_t>(msg.msg_type));
+        insert_buffer_32(buff, pos, msg.player_id);
+        return pos;
     }
 
-    std::vector<std::byte> serialize_move(const Message& msg) {
-        std::vector<std::byte> buff{};
-        insert_buffer_8(buff, static_cast<uint8_t>(msg.msg_type));
-        insert_buffer_32(buff, msg.player_id);
-        insert_buffer_32(buff, msg.game_id);
-        insert_buffer_8(buff, msg.pawn);
-        return buff;
+    size_t serialize_move(const Message &msg, std::span<std::byte> buff) {
+        size_t pos = 0;
+        insert_buffer_8(buff, pos, static_cast<uint8_t>(msg.msg_type));
+        insert_buffer_32(buff, pos, msg.player_id);
+        insert_buffer_32(buff, pos, msg.game_id);
+        insert_buffer_8(buff, pos, msg.pawn);
+        return pos;
     }
 
-    std::vector<std::byte> serialize_status(const Message& msg) {
-        std::vector<std::byte> buff{};
-        insert_buffer_8(buff, static_cast<uint8_t>(msg.msg_type));
-        insert_buffer_32(buff, msg.player_id);
-        insert_buffer_32(buff, msg.game_id);
-        return buff;
+    size_t serialize_status(const Message &msg, std::span<std::byte> buff) {
+        size_t pos = 0;
+        insert_buffer_8(buff, pos, static_cast<uint8_t>(msg.msg_type));
+        insert_buffer_32(buff, pos, msg.player_id);
+        insert_buffer_32(buff, pos, msg.game_id);
+        return pos;
     }
-
 }
 
 namespace Protocol {
-    std::variant<Message, uint8_t> try_deserialize_request(const std::vector<std::byte> &buff) {
+    std::variant<Message, uint8_t> try_deserialize_request(const std::span<const std::byte> &buff) {
         if (buff.empty()) {
             return static_cast<uint8_t>(0);
         }
@@ -247,56 +251,8 @@ namespace Protocol {
         }
     }
 
-    std::vector<std::byte> serialize_request(const Message& msg) {
-        switch (msg.msg_type) {
-            case MessageType::MSG_JOIN:
-                return serialize_join(msg);
-            case MessageType::MSG_MOVE_1:
-            case MessageType::MSG_MOVE_2:
-                return serialize_move(msg);
-            case MessageType::MSG_KEEP_ALIVE:
-            case MessageType::MSG_GIVE_UP:
-                return serialize_status(msg);
-        }
-        std::vector<std::byte> empty;
-        return empty;
-    }
-
-    std::vector<std::byte> serialize_game_state(const Game &game) {
-        std::vector<std::byte> buff;
-
-        insert_buffer_32(buff, game.get_id());
-        insert_buffer_32(buff, game.get_a_id());
-        insert_buffer_32(buff, game.get_b_id());
-        insert_buffer_8(buff, static_cast<uint8_t>(game.get_status()));
-        insert_buffer_8(buff, game.get_max_pawn());
-
-        std::array<std::byte, 32> pawns = game.get_pawns();
-        size_t size = (game.get_max_pawn() / 8) + 1;
-        for (size_t i = 0; i < size; i++) {
-            insert_buffer_8(buff, static_cast<uint8_t>(pawns[i]));
-        }
-
-        return buff;
-    }
-
-    std::vector<std::byte> serialize_wrong_msg(const std::vector<std::byte> &packet,
-                                               uint8_t err_idx) {
-        std::vector<std::byte> buff;
-
-        size_t copy_len = std::min<size_t>(packet.size(), 12);
-
-        buff.insert(buff.end(), packet.begin(),
-                    packet.begin() + static_cast<std::ptrdiff_t>(copy_len));
-        buff.insert(buff.end(), 12 - copy_len, std::byte{0});
-        buff.push_back(static_cast<std::byte>(255));
-        buff.push_back(static_cast<std::byte>(err_idx));
-
-        return buff;
-    }
-
-    std::optional<std::variant<GameState, WrongMessage> > try_deserialize_response(
-        const std::vector<std::byte> &buff) {
+    std::optional<std::variant<GameState, WrongMessage>> try_deserialize_response(
+    const std::span<const std::byte> &buff) {
         // 13th byte is the status.
         if (buff.size() < 13) {
             return std::nullopt;
@@ -311,5 +267,58 @@ namespace Protocol {
             return try_deserialize_wrong_msg(buff);
         }
         return std::nullopt;
+    }
+
+    size_t serialize_request(const Message &msg, std::span<std::byte> buff) {
+        switch (msg.msg_type) {
+            case MessageType::MSG_JOIN:
+                return serialize_join(msg, buff);
+            case MessageType::MSG_MOVE_1:
+            case MessageType::MSG_MOVE_2:
+                return serialize_move(msg, buff);
+            case MessageType::MSG_KEEP_ALIVE:
+            case MessageType::MSG_GIVE_UP:
+                return serialize_status(msg, buff);
+        }
+        return 0;
+    }
+
+    size_t serialize_game_state(const Game &game, std::span<std::byte> buff) {
+        size_t pos = 0;
+        insert_buffer_32(buff, pos, game.get_id());
+        insert_buffer_32(buff, pos, game.get_a_id());
+        insert_buffer_32(buff, pos, game.get_b_id());
+        insert_buffer_8(buff, pos, static_cast<uint8_t>(game.get_status()));
+        insert_buffer_8(buff, pos, game.get_max_pawn());
+
+        std::array<std::byte, 32> pawns = game.get_pawns();
+        size_t size = (game.get_max_pawn() / 8) + 1;
+        for (size_t i = 0; i < size; i++) {
+            insert_buffer_8(buff, pos, static_cast<uint8_t>(pawns[i]));
+        }
+
+        return pos;
+    }
+
+    size_t serialize_wrong_msg(std::span<const std::byte> packet,
+                           uint8_t err_idx, std::span<std::byte> buff) {
+        if (buff.size() < 14) {
+            return 0;
+        }
+
+        size_t copy_len = std::min<size_t>(packet.size(), 12);
+        if (copy_len > 0) {
+            std::memcpy(buff.data(), packet.data(), copy_len);
+        }
+
+        if (copy_len < 12) {
+            std::memset(buff.data() + copy_len, 0, 12 - copy_len);
+        }
+
+        buff[12] = static_cast<std::byte>(255);
+
+        buff[13] = static_cast<std::byte>(err_idx);
+
+        return 14;
     }
 }

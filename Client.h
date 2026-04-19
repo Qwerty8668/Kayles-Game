@@ -18,9 +18,9 @@ public:
 
     int start_connection();
 
-    struct ::sockaddr_in send_packet(int sockfd, const std::vector<std::byte> &packet);
+    struct ::sockaddr_in send_packet(int sockfd, const std::span<const std::byte> &packet);
 
-    std::optional<std::vector<std::byte>> wait_for_answer(int sockfd, struct sockaddr_in server_addr);
+    static ssize_t wait_for_answer(int sockfd, struct sockaddr_in server_addr, std::span<std::byte> buffer);
 
     void print_no_answer() const;
 

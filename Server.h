@@ -30,7 +30,7 @@ private:
 
     int init_socket() const;
 
-    static sockaddr_in receive_packet(int socket_fd, std::vector<std::byte> &buffer);
+    static size_t receive_packet(int socket_fd, std::array<std::byte, 1024> &buffer, sockaddr_in &client_address);
 
     void check_timeouts();
 
@@ -41,7 +41,7 @@ private:
     static void send_game_state(int sockfd, struct sockaddr_in client, const Game &game);
 
     static void send_wrong_msg(int sockfd, struct sockaddr_in client,
-                               std::vector<std::byte> &packet, uint8_t err_idx);
+                               std::span<const std::byte> &packet, uint8_t err_idx);
 
     Game *handle_join(PlayerId player_id);
 

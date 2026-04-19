@@ -18,16 +18,19 @@ void Server::run() {
     int socket_fd = init_socket();
     std::cout << "Server started." << std::endl;
 
-    std::vector<std::byte> packet(BUFFER_SIZE);
+    std::array<std::byte, BUFFER_SIZE> packet{};
     while (true) {
-        sockaddr_in client = receive_packet(socket_fd, packet);
+        sockaddr_in client{};
+        size_t received = receive_packet(socket_fd, packet, client);
         check_timeouts();
 
-        auto result = Protocol::try_deserialize_request(packet);
+        std::span<const std::byte> packet_view(packet.data(), received);
+
+        auto result = Protocol::try_deserialize_request(packet_view);
 
         if (std::holds_alternative<uint8_t>(result)) {
             uint8_t error_idx = std::get<uint8_t>(result);
-            send_wrong_msg(socket_fd, client, packet, error_idx);
+            send_wrong_msg(socket_fd, client, packet_view, error_idx);
             continue;
         }
 
@@ -36,7 +39,7 @@ void Server::run() {
         auto opt_error_idx = validate_message(msg);
         if (opt_error_idx.has_value()) {
             uint8_t error_idx = opt_error_idx.value();
-            send_wrong_msg(socket_fd, client, packet, error_idx);
+            send_wrong_msg(socket_fd, client, packet_view, error_idx);
             continue;
         }
 
@@ -56,16 +59,13 @@ int Server::init_socket() const {
     return socket_fd;
 }
 
-sockaddr_in Server::receive_packet(int socket_fd, std::vector<std::byte> &buffer) {
-    buffer.resize(BUFFER_SIZE);
-    struct sockaddr_in client_address{};
+size_t Server::receive_packet(int socket_fd, std::array<std::byte, BUFFER_SIZE> &buffer,
+                              sockaddr_in &client_address) {
     socklen_t socklen = sizeof(client_address);
     size_t received = safe_recvfrom(socket_fd, buffer.data(), buffer.size(), 0,
-                                     reinterpret_cast<struct sockaddr *>(&client_address),
-                                     &socklen);
-
-    buffer.resize(received);
-    return client_address;
+                                    reinterpret_cast<struct sockaddr *>(&client_address),
+                                    &socklen);
+    return received;
 }
 
 void Server::check_timeouts() {
@@ -111,15 +111,19 @@ std::optional<uint8_t> Server::validate_message(Message &msg) {
 }
 
 void Server::send_game_state(int sockfd, struct sockaddr_in client, const Game &game) {
-    std::vector<std::byte> buffer = Protocol::serialize_game_state(game);
-    safe_sendto(sockfd, buffer.data(), buffer.size(), 0,
+    std::array<std::byte, BUFFER_SIZE> out_buffer{};
+    size_t len = Protocol::serialize_game_state(game, out_buffer);
+
+    safe_sendto(sockfd, out_buffer.data(), len, 0,
                 reinterpret_cast<struct sockaddr *>(&client), sizeof(client));
 }
 
-void Server::send_wrong_msg(int sockfd, struct sockaddr_in client, std::vector<std::byte> &packet,
+void Server::send_wrong_msg(int sockfd, struct sockaddr_in client,
+                            std::span<const std::byte> &packet,
                             uint8_t err_idx) {
-    std::vector<std::byte> buffer = Protocol::serialize_wrong_msg(packet, err_idx);
-    safe_sendto(sockfd, buffer.data(), buffer.size(), 0,
+    std::array<std::byte, BUFFER_SIZE> out_buffer{};
+    size_t len = Protocol::serialize_wrong_msg(packet, err_idx, out_buffer);
+    safe_sendto(sockfd, out_buffer.data(), len, 0,
                 reinterpret_cast<struct sockaddr *>(&client), sizeof(client));
 }
 
@@ -135,9 +139,13 @@ Game *Server::handle_join(PlayerId player_id) {
         // If no id is free, do nothing.
         if (opt_id.has_value()) {
             GameId id = opt_id.value();
-            games.emplace(id, Game(id, player_id, max_pawn, pawn_row, timeout));
-            pending_game_id = id;
-            game = &games.at(id);
+            try {
+                games.emplace(id, Game(id, player_id, max_pawn, pawn_row, timeout));
+                pending_game_id = id;
+                game = &games.at(id);
+            } catch (const std::bad_alloc&){
+                return nullptr;
+            }
         }
     }
     return game;
