@@ -70,10 +70,12 @@ bool Game::check_timeout() {
     auto now = std::chrono::steady_clock::now();
 
     if (status == GameStatus::WAITING_FOR_OPPONENT) {
+        // Game hasn't started yet.
         if (now - last_seen_a >= timeout) {
             return true;
         }
     } else if (status == GameStatus::TURN_A || status == GameStatus::TURN_B) {
+        // Game started.
         bool a_timedout = (now - last_seen_a >= timeout);
         bool b_timedout = (now - last_seen_b >= timeout);
 
@@ -85,6 +87,7 @@ bool Game::check_timeout() {
             status = GameStatus::WIN_A;
         }
     } else if (status == GameStatus::WIN_A || status == GameStatus::WIN_B) {
+        // Game ended.
         auto last_seen = std::max(last_seen_a, last_seen_b);
         if (now - last_seen >= timeout) {
             return true;

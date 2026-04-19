@@ -72,6 +72,8 @@ void Server::check_timeouts() {
     static auto last_cleanup = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
 
+    // This is really expensive operation for high amount of games.
+    // So, it's better to limit it.
     if (now - last_cleanup < std::chrono::milliseconds(50)) {
         return;
     }

@@ -28,6 +28,7 @@ void Client::run() {
     ssize_t ans_len = wait_for_answer(socket_fd, server_addr, buff);
     if (ans_len == -1) {
         print_no_answer();
+        close(socket_fd);
         return;
     }
     std::span<const std::byte> ans_view(buff.data(), ans_len);
@@ -35,6 +36,8 @@ void Client::run() {
     auto response = Protocol::try_deserialize_response(ans_view);
     if (!response.has_value()) {
         print_wrong_answer();
+        close(socket_fd);
+        return;
     }
     auto response_val = response.value();
 

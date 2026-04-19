@@ -40,6 +40,7 @@ namespace {
         return gs;
     }
 
+    // MSG_JOIN / PLAYER_ID
     std::variant<Message, uint8_t> try_deserialize_join(std::span<const std::byte> buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId);
         if (buff.size() < size) {
@@ -63,6 +64,7 @@ namespace {
         return msg;
     }
 
+    // MSG_MOVE_1|MSG_MOVE_2 / PLAYER_ID / GAME_ID / PAWN_IDX
     std::variant<Message, uint8_t> try_deserialize_move(std::span<const std::byte> buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId) + sizeof(GameId) + sizeof(PawnIndex);
         if (buff.size() < size) {
@@ -94,6 +96,7 @@ namespace {
         return msg;
     }
 
+    // MSG_KEEP_ALIVE|MSG_GIVE_UP / PLAYER_ID / GAME_ID
     std::variant<Message, uint8_t> try_deserialize_status(std::span<const std::byte> buff) {
         size_t size = sizeof(MessageType) + sizeof(PlayerId) + sizeof(GameId);
         if (buff.size() < size) {
@@ -136,6 +139,7 @@ namespace {
         buff[pos++] = static_cast<std::byte>(value);
     }
 
+    // GAME_ID / PLAYER_A / PLAYER_B / STATUS / MAX_PAWN / PAWN_ROW
     std::optional<GameState> try_deserialize_game_state(
         std::span<const std::byte> buff) {
         size_t min_size = sizeof(GameId) + 2 * sizeof(PlayerId) + sizeof(GameStatus) + sizeof(
@@ -253,14 +257,16 @@ namespace Protocol {
 
     std::optional<std::variant<GameState, WrongMessage> > try_deserialize_response(
         std::span<const std::byte> buff) {
-        // 13th byte is the status.
         if (buff.size() < WRNG_MSG_BYTES_SIZE + 1) {
             return std::nullopt;
         }
 
+        // For both MSG_WRONG_MSG and MSG_GAME_STATE 13th byte is the status.
+        // if it is less than number of type of messages, then it's game state.
+        // If it is ERR_STATUS then it is MSG_WRONG_MSG.
         uint8_t status;
         memcpy(&status, &buff[WRNG_MSG_BYTES_SIZE], sizeof(status));
-        if (status < 5) {
+        if (status < MESSAGE_TYPES) {
             return try_deserialize_game_state(buff);
         }
         if (status == ERR_STATUS) {

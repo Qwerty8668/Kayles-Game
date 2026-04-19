@@ -19,6 +19,7 @@ std::array<std::byte, 32> read_pawn_row(const std::string& input) {
     std::array<std::byte, 32> arr{};
 
     for (size_t i = 0; i < input.length(); ++i) {
+        // Pawn 0 is the most significant bit.
         if (input[i] == '1') {
             size_t byte_idx = i / CHAR_BIT;
             size_t bit_offset = CHAR_BIT - 1 - (i % CHAR_BIT);
