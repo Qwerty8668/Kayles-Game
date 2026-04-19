@@ -2,6 +2,7 @@
 #define KAYLES_PROTOCOL_H
 #include <variant>
 #include <optional>
+#include <span>
 
 #include "Game.h"
 #include "GameState.h"

@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <netinet/in.h>
+#include <span>
 
 #include "Game.h"
 #include "Message.h"
@@ -30,7 +31,8 @@ private:
 
     int init_socket() const;
 
-    static size_t receive_packet(int socket_fd, std::array<std::byte, 1024> &buffer, sockaddr_in &client_address);
+    static size_t receive_packet(int socket_fd, std::array<std::byte, 1024> &buffer,
+                                 sockaddr_in &client_address);
 
     void check_timeouts();
 

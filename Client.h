@@ -2,7 +2,7 @@
 #define KAYLES_CLIENT_H
 #include <chrono>
 #include <string>
-#include <optional>
+#include <span>
 
 #include "GameState.h"
 #include "Message.h"
